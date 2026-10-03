@@ -12,7 +12,8 @@ FROM python:3.11-slim
 WORKDIR /app
 
 COPY --from=builder /root/.local /root/.local
-COPY app.py .
+# telemetry.py + gunicorn.conf.py: instrumentacao OpenTelemetry (Fase 4)
+COPY app.py telemetry.py gunicorn.conf.py ./
 
 ENV PATH=/root/.local/bin:$PATH
 
