@@ -11,15 +11,21 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY --from=builder /root/.local /root/.local
+# Usuário não-root com HOME próprio: os pacotes do pip --user precisam ficar
+# num diretório legível pelo appuser (/root não é). Mesmo padrão do
+# flag-service e da imagem publicada b30409b-fix2 (correção que estava só no ECR).
+RUN addgroup --system appgroup && adduser --system --ingroup appgroup --home /home/appuser appuser
+
+COPY --from=builder --chown=appuser:appgroup /root/.local /home/appuser/.local
 # telemetry.py + gunicorn.conf.py: instrumentacao OpenTelemetry (Fase 4)
-COPY app.py telemetry.py gunicorn.conf.py ./
+COPY --chown=appuser:appgroup app.py telemetry.py gunicorn.conf.py ./
 
-ENV PATH=/root/.local/bin:$PATH
+ENV HOME=/home/appuser
+ENV PATH=/home/appuser/.local/bin:$PATH
 
-RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
 USER appuser
 
 EXPOSE 8003
 
+# Roda com gunicorn em produção
 CMD ["gunicorn", "--bind", "0.0.0.0:8003", "--workers", "2", "app:app"]
